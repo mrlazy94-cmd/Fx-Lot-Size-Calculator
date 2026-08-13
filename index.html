@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FX Risk & Lot Size Calculator</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --accent-color: #3b82f6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --success-color: #10b981;
+      --input-bg: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .calculator-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 440px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .risk-labels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    select, input {
+      width: 100%;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--accent-color);
+    }
+
+    .risk-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .quick-tiers {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .tier-btn {
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tier-btn:hover, .tier-btn.active {
+      background-color: var(--accent-color);
+      border-color: var(--accent-color);
+      color: #fff;
+    }
+
+    .pair-selector-wrapper {
+      position: relative;
+      z-index: 100;
+    }
+
+    .selected-pair-btn {
+      width: 100%;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .accordion-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-top: 4px;
+      max-height: 260px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+      padding: 8px;
+    }
+
+    .accordion-menu.open {
+      display: block;
+    }
+
+    .search-input {
+      margin-bottom: 8px;
+    }
+
+    .category-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding: 6px 8px;
+      background-color: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+      margin-top: 6px;
+    }
+
+    .pair-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+      padding: 4px 0;
+    }
+
+    .pair-option {
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .pair-option:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .segmented-control {
+      display: flex;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 3px;
+      margin-bottom: 10px;
+      gap: 4px;
+    }
+
+    .segment-btn {
+      flex: 1;
+      padding: 10px 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .segment-btn.active {
+      background-color: var(--accent-color);
+      color: #ffffff;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .results-card {
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .result-lot-size {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--success-color);
+      margin: 4px 0 2px 0;
+    }
+
+    .actual-risk-sub {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .live-rate-info {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--accent-color);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sync-btn {
+      background: transparent;
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .sync-btn:hover {
+      background-color: var(--accent-color);
+      color: #ffffff;
+    }
+
+    .rounding-section {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.825rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .rounding-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .sub-metrics {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .sub-metrics div span {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<div class="calculator-card">
+  <div class="header">
+    <h2>FX Risk & Lot Size Calculator</h2>
+  </div>
+
+  <!-- Account Profile -->
+  <div class="form-group">
+    <label class="label">Account Profile</label>
+    <select id="accountSelect" onchange="updateAccountProfile()">
+      <option value="FXCM">FXCM Personal (£2,000 GBP)</option>
+      <option value="FTMO">FTMO Prop (£10,000 GBP)</option>
+      <option value="WFUNDED">W-Funded ($10,000 USD)</option>
+    </select>
+  </div>
+
+  <!-- Risk Input Section -->
+  <div class="form-group">
+    <div class="risk-labels">
+      <label class="label">Cash Risk</label>
+      <label class="label">Risk Ratio %</label>
+    </div>
+    <div class="risk-container">
+      <input type="number" id="riskCash" value="50" oninput="onCashInput()" placeholder="Cash Risk">
+      <input type="number" id="riskPercent" value="2.5" step="0.1" oninput="onPercentInput()" placeholder="Risk %">
+    </div>
+    <div class="quick-tiers" id="quickTiers">
+      <button type="button" class="tier-btn" onclick="setCashRisk(20)">£20</button>
+      <button type="button" class="tier-btn active" onclick="setCashRisk(50)">£50</button>
+      <button type="button" class="tier-btn" onclick="setCashRisk(100)">£100</button>
+      <button type="button" class="tier-btn" onclick="setCashRisk(150)">£150</button>
+      <button type="button" class="tier-btn" onclick="setCashRisk(200)">£200</button>
+    </div>
+  </div>
+
+  <!-- Instrument Selector -->
+  <div class="form-group">
+    <label class="label">Instrument</label>
+    <div class="pair-selector-wrapper">
+      <button type="button" class="selected-pair-btn" id="pairDropdownBtn" onclick="toggleMenu()">
+        <span id="selectedPairText">EUR/USD</span>
+        <span>▼</span>
+      </button>
+
+      <div class="accordion-menu" id="accordionMenu">
+        <input type="text" class="search-input" id="searchBar" placeholder="🔍 Search symbol..." oninput="filterPairs()">
+
+        <!-- Category: Commodities & Indices -->
+        <div class="category-header">📦 COMMODITIES & INDICES</div>
+        <div class="pair-grid">
+          <div class="pair-option" onclick="selectPair('XCU/USD')">🥉 Copper (XCU)</div>
+          <div class="pair-option" onclick="selectPair('XAU/USD')">🥇 Gold (XAU)</div>
+          <div class="pair-option" onclick="selectPair('XAG/USD')">🥈 Silver (XAG)</div>
+          <div class="pair-option" onclick="selectPair('USOilSpot')">🛢️ WTI Oil</div>
+          <div class="pair-option" onclick="selectPair('SPX500')">📈 SPX500</div>
+        </div>
+
+        <!-- Category: Majors (7) -->
+        <div class="category-header">⚡ MAJORS</div>
+        <div class="pair-grid">
+          <div class="pair-option" onclick="selectPair('EUR/USD')">EUR/USD</div>
+          <div class="pair-option" onclick="selectPair('GBP/USD')">GBP/USD</div>
+          <div class="pair-option" onclick="selectPair('AUD/USD')">AUD/USD</div>
+          <div class="pair-option" onclick="selectPair('NZD/USD')">NZD/USD</div>
+          <div class="pair-option" onclick="selectPair('USD/CAD')">USD/CAD</div>
+          <div class="pair-option" onclick="selectPair('USD/CHF')">USD/CHF</div>
+          <div class="pair-option" onclick="selectPair('USD/JPY')">USD/JPY</div>
+        </div>
+
+        <!-- Category: EUR Crosses (6) -->
+        <div class="category-header">💶 EUR CROSSES</div>
+        <div class="pair-grid">
+          <div class="pair-option" onclick="selectPair('EUR/GBP')">EUR/GBP</div>
+          <div class="pair-option" onclick="selectPair('EUR/JPY')">EUR/JPY</div>
+          <div class="pair-option" onclick="selectPair('EUR/AUD')">EUR/AUD</div>
+          <div class="pair-option" onclick="selectPair('EUR/CAD')">EUR/CAD</div>
+          <div class="pair-option" onclick="selectPair('EUR/CHF')">EUR/CHF</div>
+          <div class="pair-option" onclick="selectPair('EUR/NZD')">EUR/NZD</div>
+        </div>
+
+        <!-- Category: GBP Crosses (5) -->
+        <div class="category-header">💷 GBP CROSSES</div>
+        <div class="pair-grid">
+          <div class="pair-option" onclick="selectPair('GBP/JPY')">GBP/JPY</div>
+          <div class="pair-option" onclick="selectPair('GBP/AUD')">GBP/AUD</div>
+          <div class="pair-option" onclick="selectPair('GBP/CAD')">GBP/CAD</div>
+          <div class="pair-option" onclick="selectPair('GBP/CHF')">GBP/CHF</div>
+          <div class="pair-option" onclick="selectPair('GBP/NZD')">GBP/NZD</div>
+        </div>
+
+        <!-- Category: AUD Crosses (4) -->
+        <div class="category-header">🇦🇺 AUD CROSSES</div>
+        <div class="pair-grid">
+          <div class="pair-option" onclick="selectPair('AUD/JPY')">AUD/JPY</div>
+          <div class="pair-option" onclick="selectPair('AUD/CAD')">AUD/CAD</div>
+          <div class="pair-option" onclick="selectPair('AUD/CHF')">AUD/CHF</div>
+          <div class="pair-option" onclick="selectPair('AUD/NZD')">AUD/NZD</div>
+        </div>
+
+        <!-- Category: NZD Crosses (3) -->
+        <div class="category-header">🇳🇿 NZD CROSSES</div>
+        <div class="pair-grid">
+          <div class="pair-option" onclick="selectPair('NZD/JPY')">NZD/JPY</div>
+          <div class="pair-option" onclick="selectPair('NZD/CAD')">NZD/CAD</div>
+          <div class="pair-option" onclick="selectPair('NZD/CHF')">NZD/CHF</div>
+        </div>
+
+        <!-- Category: CAD & CHF Crosses (3) -->
+        <div class="category-header">🇨🇦 🇨🇭 CAD & CHF CROSSES</div>
+        <div class="pair-grid">
+          <div class="pair-option" onclick="selectPair('CAD/JPY')">CAD/JPY</div>
+          <div class="pair-option" onclick="selectPair('CAD/CHF')">CAD/CHF</div>
+          <div class="pair-option" onclick="selectPair('CHF/JPY')">CHF/JPY</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stop Loss Input Section -->
+  <div class="form-group">
+    <label class="label">Stop Loss</label>
+    
+    <div class="segmented-control">
+      <button type="button" class="segment-btn active" id="btnModePips" onclick="setSLMode('pips')">Pips / Points Distance</button>
+      <button type="button" class="segment-btn" id="btnModePrice" onclick="setSLMode('price')">Entry & SL Price</button>
+    </div>
+
+    <div id="pipsModeContainer">
+      <input type="number" id="slPips" value="100" step="any" oninput="calculateLots()" placeholder="Stop Loss Distance">
+    </div>
+
+    <div id="priceModeContainer" class="two-col" style="display: none;">
+      <input type="number" id="entryPrice" step="any" placeholder="Entry Price" oninput="calcPipsFromPrices()">
+      <input type="number" id="stopPrice" step="any" placeholder="SL Price" oninput="calcPipsFromPrices()">
+    </div>
+  </div>
+
+  <!-- Output Results Card -->
+  <div class="results-card">
+    <div class="label">Standard Lot Size</div>
+    <div class="result-lot-size" id="resultLot">--</div>
+    <div class="actual-risk-sub" id="actualRiskSub">Actual Risk: £0.00</div>
+    
+    <!-- Dynamic Rate Display + Sync Button -->
+    <div class="live-rate-info" id="liveRateDisplay" style="display: none;">
+      <span id="rateText"></span>
+      <button type="button" class="sync-btn" id="syncBtn" onclick="fetchLiveRates()">🔄 Sync Live Price</button>
+    </div>
+
+    <div class="rounding-section" id="roundingSection" style="display: none;">
+      <div class="rounding-row">
+        <div>▼ Round Down (<span id="downLots">0</span> Lots):</div>
+        <div id="downRisk">£0.00</div>
+      </div>
+      <div class="rounding-row">
+        <div>▲ Round Up (<span id="upLots">0</span> Lots):</div>
+        <div id="upRisk">£0.00</div>
+      </div>
+    </div>
+
+    <div class="sub-metrics">
+      <div>Target Risk: <span id="resCash">£50.00</span></div>
+      <div>Val per Lot: <span id="resPipVal">--</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Load Spec Files First -->
+<script src="js/fxcm-specs.js"></script>
+
+<!-- Calculator Core Engine -->
+<script>
+  const FINNHUB_KEY = "d9v2k2hr01qv408iqa70d9v2k2hr01qv408iqa7g";
+
+  let accountBalance = 2000;
+  let currencySymbol = "£";
+  let accountCurrency = "GBP";
+  let activePair = "EUR/USD";
+  let activeSLMode = "pips";
+  let liveRates = {}; 
+  let lastUpdatedTime = "";
+
+  // On-Demand Rate Fetching (Finnhub API with automatic fallback)
+  async function fetchLiveRates() {
+    const syncBtn = document.getElementById("syncBtn");
+    if (syncBtn) syncBtn.innerText = "⌛ Syncing...";
+
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/forex/rates?base=${accountCurrency}&token=${FINNHUB_KEY}`);
+      const data = await res.json();
+      
+      if (data && data.quote) {
+        liveRates = data.quote;
+      } else {
+        const resFallback = await fetch(`https://open.er-api.com/v6/latest/${accountCurrency}`);
+        const dataFallback = await resFallback.json();
+        if (dataFallback && dataFallback.rates) {
+          liveRates = dataFallback.rates;
+        }
+      }
+    } catch (e) {
+      console.warn("Finnhub fetch failed, using fallback API.", e);
+      try {
+        const resFallback = await fetch(`https://open.er-api.com/v6/latest/${accountCurrency}`);
+        const dataFallback = await resFallback.json();
+        if (dataFallback && dataFallback.rates) {
+          liveRates = dataFallback.rates;
+        }
+      } catch (err) {
+        console.warn("All rate fetches failed.", err);
+      }
+    } finally {
+      lastUpdatedTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (syncBtn) syncBtn.innerText = "🔄 Sync Live Price";
+      calculateLots();
+    }
+  }
+
+  function updateAccountProfile() {
+    const profile = document.getElementById("accountSelect").value;
+    if (profile === "FXCM") {
+      accountBalance = 2000;
+      currencySymbol = "£";
+      accountCurrency = "GBP";
+    } else if (profile === "FTMO") {
+      accountBalance = 10000;
+      currencySymbol = "£";
+      accountCurrency = "GBP";
+    } else if (profile === "WFUNDED") {
+      accountBalance = 10000;
+      currencySymbol = "$";
+      accountCurrency = "USD";
+    }
+    
+    const btns = document.querySelectorAll("#quickTiers .tier-btn");
+    btns.forEach(btn => {
+      const val = btn.innerText.replace(/[^0-9]/g, '');
+      btn.innerText = currencySymbol + val;
+    });
+
+    fetchLiveRates();
+  }
+
+  function setCashRisk(val) {
+    document.getElementById("riskCash").value = val;
+    document.querySelectorAll("#quickTiers .tier-btn").forEach(btn => {
+      const btnVal = parseFloat(btn.innerText.replace(/[^0-9]/g, ''));
+      btn.classList.toggle("active", btnVal === val);
+    });
+    onCashInput();
+  }
+
+  function onCashInput() {
+    const cash = parseFloat(document.getElementById("riskCash").value) || 0;
+    const pct = ((cash / accountBalance) * 100).toFixed(2);
+    document.getElementById("riskPercent").value = pct;
+    calculateLots();
+  }
+
+  function onPercentInput() {
+    const pct = parseFloat(document.getElementById("riskPercent").value) || 0;
+    const cash = ((pct / 100) * accountBalance).toFixed(2);
+    document.getElementById("riskCash").value = cash;
+    calculateLots();
+  }
+
+  function toggleMenu() {
+    document.getElementById("accordionMenu").classList.toggle("open");
+  }
+
+  function selectPair(pair) {
+    activePair = pair;
+    document.getElementById("selectedPairText").innerText = pair;
+    document.getElementById("accordionMenu").classList.remove("open");
+    fetchLiveRates();
+  }
+
+  function filterPairs() {
+    const query = document.getElementById("searchBar").value.toLowerCase();
+    document.querySelectorAll(".pair-option").forEach(opt => {
+      opt.style.display = opt.innerText.toLowerCase().includes(query) ? "block" : "none";
+    });
+  }
+
+  function setSLMode(mode) {
+    activeSLMode = mode;
+    document.getElementById("btnModePips").classList.toggle("active", mode === 'pips');
+    document.getElementById("btnModePrice").classList.toggle("active", mode === 'price');
+    document.getElementById("pipsModeContainer").style.display = mode === 'pips' ? "block" : "none";
+    document.getElementById("priceModeContainer").style.display = mode === 'price' ? "grid" : "none";
+    
+    if (mode === 'pips') calculateLots();
+    else calcPipsFromPrices();
+  }
+
+  function calcPipsFromPrices() {
+    const entry = parseFloat(document.getElementById("entryPrice").value);
+    const stop = parseFloat(document.getElementById("stopPrice").value);
+
+    if (!isNaN(entry) && !isNaN(stop) && entry > 0 && stop > 0 && entry !== stop) {
+      const rawDistance = Math.abs(entry - stop);
+      document.getElementById("slPips").value = parseFloat(rawDistance.toFixed(4));
+    } else {
+      document.getElementById("slPips").value = "";
+    }
+    calculateLots();
+  }
+
+  function calculateLots() {
+    const cashRisk = parseFloat(document.getElementById("riskCash").value) || 0;
+    const slPipsRaw = document.getElementById("slPips").value;
+    const slDist = parseFloat(slPipsRaw);
+
+    let valuePerUnitMove = 1.0; 
+    let volumeStep = 0.01;
+    let unitLabel = "pip";
+
+    const profile = document.getElementById("accountSelect").value;
+    const liveDisplay = document.getElementById("liveRateDisplay");
+
+    // 1. Check Broker Specs / Commodities / Indices First
+    if (profile === "FXCM" && (activePair === "XCU/USD" || activePair === "XAU/USD" || activePair === "XAG/USD" || activePair === "USOilSpot" || activePair === "SPX500")) {
+      let baseValueUSD = 100.0;
+      if (activePair === "XAG/USD") baseValueUSD = 50.0;
+      if (activePair === "SPX500") { baseValueUSD = 1.0; volumeStep = 1.00; unitLabel = "point"; }
+      if (activePair === "XCU/USD") { volumeStep = 1.00; unitLabel = "point"; }
+      if (activePair === "XAU/USD" || activePair === "XAG/USD" || activePair === "USOilSpot") { unitLabel = "dollar"; }
+
+      const usdRate = liveRates["USD"] || 1.34851;
+      valuePerUnitMove = (accountCurrency === "GBP") ? (baseValueUSD / usdRate) : baseValueUSD;
+
+      if (accountCurrency === "GBP") {
+        const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
+        document.getElementById("rateText").innerText = `GBPUSD: ${usdRate.toFixed(5)}${timeStr}`;
+        liveDisplay.style.display = "flex";
+      } else {
+        liveDisplay.style.display = "none";
+      }
+    } 
+    // 2. Standard Forex Pair & Cross Live Rate Calculation
+    else if (activePair.includes("/")) {
+      const parts = activePair.split("/");
+      const baseCurrency = parts[0];
+      const quoteCurrency = parts[1];
+      volumeStep = 0.01;
+      unitLabel = "pip";
+
+      let pipValueInQuote = (quoteCurrency === "JPY") ? 1000 : 10;
+
+      if (quoteCurrency === accountCurrency) {
+        valuePerUnitMove = pipValueInQuote;
+        liveDisplay.style.display = "none";
+      } else {
+        const rate = liveRates[quoteCurrency] || (quoteCurrency === "CAD" ? 1.8785 : 1.34851); 
+        valuePerUnitMove = pipValueInQuote / rate;
+        
+        const convPair = `${accountCurrency}${quoteCurrency}`;
+        const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
+        document.getElementById("rateText").innerText = `${convPair}: ${rate.toFixed(5)}${timeStr}`;
+        liveDisplay.style.display = "flex";
+      }
+    }
+
+    document.getElementById("resCash").innerText = currencySymbol + cashRisk.toFixed(2);
+    document.getElementById("resPipVal").innerText = currencySymbol + valuePerUnitMove.toFixed(2) + " / " + unitLabel;
+
+    if (isNaN(slDist) || slDist <= 0 || slPipsRaw.trim() === "") {
+      document.getElementById("resultLot").innerText = "--";
+      document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}0.00`;
+      document.getElementById("roundingSection").style.display = "none";
+      return;
+    }
+
+    let exactLots = cashRisk / (slDist * valuePerUnitMove);
+    let roundingContainer = document.getElementById("roundingSection");
+
+    if (volumeStep === 1.00) {
+      let primaryLots = Math.max(1, Math.round(exactLots));
+      let downLots = Math.max(1, primaryLots - 1);
+      let upLots = primaryLots + 1;
+
+      let primaryRisk = primaryLots * slDist * valuePerUnitMove;
+      let riskDown = downLots * slDist * valuePerUnitMove;
+      let riskUp = upLots * slDist * valuePerUnitMove;
+
+      let diffDown = (riskDown - cashRisk).toFixed(2);
+      let diffUp = (riskUp - cashRisk).toFixed(2);
+
+      document.getElementById("resultLot").innerText = primaryLots.toFixed(0);
+      document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${primaryRisk.toFixed(2)}`;
+      document.getElementById("downLots").innerText = downLots.toFixed(0);
+      document.getElementById("upLots").innerText = upLots.toFixed(0);
+      document.getElementById("downRisk").innerText = `${currencySymbol}${riskDown.toFixed(2)} (${diffDown >= 0 ? '+' : ''}${currencySymbol}${diffDown})`;
+      document.getElementById("upRisk").innerText = `${currencySymbol}${riskUp.toFixed(2)} (+${currencySymbol}${diffUp})`;
+
+      roundingContainer.style.display = "flex";
+    } else {
+      document.getElementById("resultLot").innerText = exactLots.toFixed(2);
+      document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${cashRisk.toFixed(2)}`;
+      roundingContainer.style.display = "none";
+    }
+  }
+
+  // Initial Setup
+  updateAccountProfile();
+</script>
+
+</body>
+</html>
