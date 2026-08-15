@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FX Risk & Lot Size Calculator</title>
+  <title>FX & Commodity Risk Calculator</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -13,6 +13,7 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --success-color: #10b981;
+      --warning-color: #f59e0b;
       --input-bg: #0f172a;
     }
 
@@ -250,10 +251,21 @@
       margin: 4px 0 2px 0;
     }
 
+    .result-lot-size.warning {
+      color: var(--warning-color);
+    }
+
     .actual-risk-sub {
       font-size: 0.95rem;
       font-weight: 700;
       color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .min-warning-note {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--warning-color);
       margin-bottom: 8px;
     }
 
@@ -366,17 +378,23 @@
       <div class="accordion-menu" id="accordionMenu">
         <input type="text" class="search-input" id="searchBar" placeholder="🔍 Search symbol..." oninput="filterPairs()">
 
+        <!-- Category: Crypto (FTMO & W-Funded only) -->
+        <div id="cryptoCategory" class="category-header" style="display: none;">🪙 CRYPTO</div>
+        <div id="cryptoGrid" class="pair-grid" style="display: none;">
+          <div class="pair-option" onclick="selectPair('BTC/USD')">₿ Bitcoin (BTC)</div>
+        </div>
+
         <!-- Category: Commodities & Indices -->
         <div class="category-header">📦 COMMODITIES & INDICES</div>
         <div class="pair-grid">
-          <div class="pair-option" onclick="selectPair('XCU/USD')">🥉 Copper (XCU)</div>
           <div class="pair-option" onclick="selectPair('XAU/USD')">🥇 Gold (XAU)</div>
+          <div class="pair-option" onclick="selectPair('XCU/USD')">🥉 Copper (XCU - TV Scale)</div>
           <div class="pair-option" onclick="selectPair('XAG/USD')">🥈 Silver (XAG)</div>
           <div class="pair-option" onclick="selectPair('USOilSpot')">🛢️ WTI Oil</div>
           <div class="pair-option" onclick="selectPair('SPX500')">📈 SPX500</div>
         </div>
 
-        <!-- Category: Majors (7) -->
+        <!-- Category: Majors -->
         <div class="category-header">⚡ MAJORS</div>
         <div class="pair-grid">
           <div class="pair-option" onclick="selectPair('EUR/USD')">EUR/USD</div>
@@ -388,7 +406,7 @@
           <div class="pair-option" onclick="selectPair('USD/JPY')">USD/JPY</div>
         </div>
 
-        <!-- Category: EUR Crosses (6) -->
+        <!-- Category: EUR Crosses -->
         <div class="category-header">💶 EUR CROSSES</div>
         <div class="pair-grid">
           <div class="pair-option" onclick="selectPair('EUR/GBP')">EUR/GBP</div>
@@ -399,7 +417,7 @@
           <div class="pair-option" onclick="selectPair('EUR/NZD')">EUR/NZD</div>
         </div>
 
-        <!-- Category: GBP Crosses (5) -->
+        <!-- Category: GBP Crosses -->
         <div class="category-header">💷 GBP CROSSES</div>
         <div class="pair-grid">
           <div class="pair-option" onclick="selectPair('GBP/JPY')">GBP/JPY</div>
@@ -409,7 +427,7 @@
           <div class="pair-option" onclick="selectPair('GBP/NZD')">GBP/NZD</div>
         </div>
 
-        <!-- Category: AUD Crosses (4) -->
+        <!-- Category: AUD Crosses -->
         <div class="category-header">🇦🇺 AUD CROSSES</div>
         <div class="pair-grid">
           <div class="pair-option" onclick="selectPair('AUD/JPY')">AUD/JPY</div>
@@ -418,7 +436,7 @@
           <div class="pair-option" onclick="selectPair('AUD/NZD')">AUD/NZD</div>
         </div>
 
-        <!-- Category: NZD Crosses (3) -->
+        <!-- Category: NZD Crosses -->
         <div class="category-header">🇳🇿 NZD CROSSES</div>
         <div class="pair-grid">
           <div class="pair-option" onclick="selectPair('NZD/JPY')">NZD/JPY</div>
@@ -426,7 +444,7 @@
           <div class="pair-option" onclick="selectPair('NZD/CHF')">NZD/CHF</div>
         </div>
 
-        <!-- Category: CAD & CHF Crosses (3) -->
+        <!-- Category: CAD & CHF Crosses -->
         <div class="category-header">🇨🇦 🇨🇭 CAD & CHF CROSSES</div>
         <div class="pair-grid">
           <div class="pair-option" onclick="selectPair('CAD/JPY')">CAD/JPY</div>
@@ -458,9 +476,10 @@
 
   <!-- Output Results Card -->
   <div class="results-card">
-    <div class="label">Standard Lot Size</div>
+    <div class="label" id="resultLabel">Standard Lot Size</div>
     <div class="result-lot-size" id="resultLot">--</div>
     <div class="actual-risk-sub" id="actualRiskSub">Actual Risk: £0.00</div>
+    <div class="min-warning-note" id="minWarningNote" style="display: none;"></div>
     
     <!-- Dynamic Rate Display + Sync Button -->
     <div class="live-rate-info" id="liveRateDisplay" style="display: none;">
@@ -470,28 +489,26 @@
 
     <div class="rounding-section" id="roundingSection" style="display: none;">
       <div class="rounding-row">
-        <div>▼ Round Down (<span id="downLots">0</span> Lots):</div>
+        <div>▼ Round Down (<span id="downLots">0</span>):</div>
         <div id="downRisk">£0.00</div>
       </div>
       <div class="rounding-row">
-        <div>▲ Round Up (<span id="upLots">0</span> Lots):</div>
+        <div>▲ Round Up (<span id="upLots">0</span>):</div>
         <div id="upRisk">£0.00</div>
       </div>
     </div>
 
     <div class="sub-metrics">
       <div>Target Risk: <span id="resCash">£50.00</span></div>
-      <div>Val per Lot: <span id="resPipVal">--</span></div>
+      <div>Val per Unit: <span id="resPipVal">--</span></div>
     </div>
   </div>
 </div>
 
-<!-- Load Spec Files First -->
-<script src="fxcm-specs.js"></script>
-
 <!-- Calculator Core Engine -->
 <script>
   const FINNHUB_KEY = "d9v2k2hr01qv408iqa70d9v2k2hr01qv408iqa7g";
+  const LBS_PER_METRIC_TON = 2204.62;
 
   let accountBalance = 2000;
   let currencySymbol = "£";
@@ -501,7 +518,6 @@
   let liveRates = {}; 
   let lastUpdatedTime = "";
 
-  // On-Demand Rate Fetching (Finnhub API with automatic fallback)
   async function fetchLiveRates() {
     const syncBtn = document.getElementById("syncBtn");
     if (syncBtn) syncBtn.innerText = "⌛ Syncing...";
@@ -539,26 +555,40 @@
 
   function updateAccountProfile() {
     const profile = document.getElementById("accountSelect").value;
+    const cryptoCat = document.getElementById("cryptoCategory");
+    const cryptoGrid = document.getElementById("cryptoGrid");
+
     if (profile === "FXCM") {
       accountBalance = 2000;
       currencySymbol = "£";
       accountCurrency = "GBP";
+      if (cryptoCat) cryptoCat.style.display = "none";
+      if (cryptoGrid) cryptoGrid.style.display = "none";
+      if (activePair === "BTC/USD") {
+        selectPair("EUR/USD");
+      }
     } else if (profile === "FTMO") {
       accountBalance = 10000;
       currencySymbol = "£";
       accountCurrency = "GBP";
+      if (cryptoCat) cryptoCat.style.display = "block";
+      if (cryptoGrid) cryptoGrid.style.display = "grid";
     } else if (profile === "WFUNDED") {
       accountBalance = 10000;
       currencySymbol = "$";
       accountCurrency = "USD";
+      if (cryptoCat) cryptoCat.style.display = "block";
+      if (cryptoGrid) cryptoGrid.style.display = "grid";
     }
     
+    // Update Quick Tier Button labels
     const btns = document.querySelectorAll("#quickTiers .tier-btn");
     btns.forEach(btn => {
       const val = btn.innerText.replace(/[^0-9]/g, '');
       btn.innerText = currencySymbol + val;
     });
 
+    onCashInput();
     fetchLiveRates();
   }
 
@@ -634,51 +664,140 @@
 
     let valuePerUnitMove = 1.0; 
     let volumeStep = 0.01;
+    let minLot = 0.01;
     let unitLabel = "pip";
 
     const profile = document.getElementById("accountSelect").value;
     const liveDisplay = document.getElementById("liveRateDisplay");
+    const warningNote = document.getElementById("minWarningNote");
+    const resultLotEl = document.getElementById("resultLot");
+    const resultLabelEl = document.getElementById("resultLabel");
 
-    // 1. Check Broker Specs / Commodities / Indices First
-    if (profile === "FXCM" && (activePair === "XCU/USD" || activePair === "XAU/USD" || activePair === "XAG/USD" || activePair === "USOilSpot" || activePair === "SPX500")) {
-      let baseValueUSD = 100.0;
-      if (activePair === "XAG/USD") baseValueUSD = 50.0;
-      if (activePair === "SPX500") { baseValueUSD = 1.0; volumeStep = 1.00; unitLabel = "point"; }
-      if (activePair === "XCU/USD") { volumeStep = 1.00; unitLabel = "point"; }
-      if (activePair === "XAU/USD" || activePair === "XAG/USD" || activePair === "USOilSpot") { unitLabel = "dollar"; }
+    const usdRate = liveRates["USD"] || 1.3490;
 
-      const usdRate = liveRates["USD"] || 1.34851;
-      valuePerUnitMove = (accountCurrency === "GBP") ? (baseValueUSD / usdRate) : baseValueUSD;
+    // --- 1. FXCM PERSONAL ---
+    if (profile === "FXCM") {
+      resultLabelEl.innerText = (activePair.includes("/") && !activePair.startsWith("X")) ? "Standard Lot Size" : "Contract Size";
+      
+      if (activePair === "XAU/USD" || activePair === "XCU/USD" || activePair === "XAG/USD" || activePair === "USOilSpot" || activePair === "SPX500") {
+        volumeStep = 1.00;
+        minLot = 1.00;
+        let baseValueUSD = 1.0;
+        unitLabel = "dollar";
 
-      if (accountCurrency === "GBP") {
+        if (activePair === "XCU/USD") { baseValueUSD = 100.0; unitLabel = "$/lb"; }
+        if (activePair === "XAG/USD") { baseValueUSD = 50.0; unitLabel = "dollar"; }
+        if (activePair === "USOilSpot") { baseValueUSD = 10.0; unitLabel = "dollar"; }
+        if (activePair === "SPX500") { baseValueUSD = 1.0; unitLabel = "point"; }
+
+        valuePerUnitMove = (accountCurrency === "GBP") ? (baseValueUSD / usdRate) : baseValueUSD;
+
         const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
         document.getElementById("rateText").innerText = `GBPUSD: ${usdRate.toFixed(5)}${timeStr}`;
         liveDisplay.style.display = "flex";
       } else {
-        liveDisplay.style.display = "none";
+        // FXCM Forex
+        const parts = activePair.split("/");
+        const quoteCurrency = parts[1];
+        volumeStep = 0.01;
+        minLot = 0.01;
+        unitLabel = "pip";
+
+        let pipValueInQuote = (quoteCurrency === "JPY") ? 1000 : 10;
+        if (quoteCurrency === accountCurrency) {
+          valuePerUnitMove = pipValueInQuote;
+          liveDisplay.style.display = "none";
+        } else {
+          const rate = liveRates[quoteCurrency] || (quoteCurrency === "CAD" ? 1.8785 : 1.3490); 
+          valuePerUnitMove = pipValueInQuote / rate;
+          const convPair = `${accountCurrency}${quoteCurrency}`;
+          const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
+          document.getElementById("rateText").innerText = `${convPair}: ${rate.toFixed(5)}${timeStr}`;
+          liveDisplay.style.display = "flex";
+        }
       }
     } 
-    // 2. Standard Forex Pair & Cross Live Rate Calculation
-    else if (activePair.includes("/")) {
-      const parts = activePair.split("/");
-      const baseCurrency = parts[0];
-      const quoteCurrency = parts[1];
+    // --- 2. FTMO PROP (£ GBP) ---
+    else if (profile === "FTMO") {
+      resultLabelEl.innerText = "Standard Lot Size";
       volumeStep = 0.01;
-      unitLabel = "pip";
+      minLot = 0.01;
 
-      let pipValueInQuote = (quoteCurrency === "JPY") ? 1000 : 10;
+      if (activePair === "XAU/USD" || activePair === "XCU/USD" || activePair === "XAG/USD" || activePair === "USOilSpot" || activePair === "SPX500" || activePair === "BTC/USD") {
+        let baseValueUSD = 100.0; // 1.00 lot XAU = 100 oz ($100 per $1 move)
+        unitLabel = "dollar";
 
-      if (quoteCurrency === accountCurrency) {
-        valuePerUnitMove = pipValueInQuote;
+        if (activePair === "XAG/USD") { baseValueUSD = 5000.0; } // 1.00 lot Silver = 5,000 oz
+        if (activePair === "XCU/USD") { baseValueUSD = 100.0; unitLabel = "$/lb"; } // 1.00 lot Copper = 100 lbs
+        if (activePair === "USOilSpot") { baseValueUSD = 100.0; }
+        if (activePair === "SPX500") { baseValueUSD = 1.0; unitLabel = "point"; }
+        if (activePair === "BTC/USD") { baseValueUSD = 1.0; unitLabel = "dollar"; }
+
+        valuePerUnitMove = baseValueUSD / usdRate;
+
+        const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
+        document.getElementById("rateText").innerText = `GBPUSD: ${usdRate.toFixed(5)}${timeStr}`;
+        liveDisplay.style.display = "flex";
+      } else {
+        // FTMO Forex
+        const parts = activePair.split("/");
+        const quoteCurrency = parts[1];
+        unitLabel = "pip";
+
+        let pipValueInQuote = (quoteCurrency === "JPY") ? 1000 : 10;
+        if (quoteCurrency === accountCurrency) {
+          valuePerUnitMove = pipValueInQuote;
+          liveDisplay.style.display = "none";
+        } else {
+          const rate = liveRates[quoteCurrency] || (quoteCurrency === "CAD" ? 1.8785 : 1.3490); 
+          valuePerUnitMove = pipValueInQuote / rate;
+          const convPair = `${accountCurrency}${quoteCurrency}`;
+          const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
+          document.getElementById("rateText").innerText = `${convPair}: ${rate.toFixed(5)}${timeStr}`;
+          liveDisplay.style.display = "flex";
+        }
+      }
+    }
+    // --- 3. W-FUNDED ($ USD) ---
+    else if (profile === "WFUNDED") {
+      resultLabelEl.innerText = "Standard Lot Size";
+      volumeStep = 0.01;
+      minLot = 0.01;
+
+      if (activePair === "XAU/USD" || activePair === "XCU/USD" || activePair === "XAG/USD" || activePair === "USOilSpot" || activePair === "SPX500" || activePair === "BTC/USD") {
+        unitLabel = "dollar";
+
+        if (activePair === "XAU/USD") { valuePerUnitMove = 100.0; } // 1.00 lot = $100 per $1 move
+        else if (activePair === "XAG/USD") { valuePerUnitMove = 5000.0; } // 1.00 lot = $5,000 per $1 move ($50 per 0.01)
+        else if (activePair === "XCU/USD") { 
+          // W-Funded 1 lot = $30/point on Metric Tons. Scaled to TV ($/lb)
+          valuePerUnitMove = 30.0 * LBS_PER_METRIC_TON; 
+          unitLabel = "$/lb";
+        }
+        else if (activePair === "USOilSpot") { valuePerUnitMove = 100.0; }
+        else if (activePair === "SPX500") { valuePerUnitMove = 5.0; unitLabel = "point"; }
+        else if (activePair === "BTC/USD") { valuePerUnitMove = 1.0; unitLabel = "dollar"; }
+
         liveDisplay.style.display = "none";
       } else {
-        const rate = liveRates[quoteCurrency] || (quoteCurrency === "CAD" ? 1.8785 : 1.34851); 
-        valuePerUnitMove = pipValueInQuote / rate;
-        
-        const convPair = `${accountCurrency}${quoteCurrency}`;
-        const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
-        document.getElementById("rateText").innerText = `${convPair}: ${rate.toFixed(5)}${timeStr}`;
-        liveDisplay.style.display = "flex";
+        // W-Funded Forex
+        const parts = activePair.split("/");
+        const quoteCurrency = parts[1];
+        unitLabel = "pip";
+
+        let pipValueInQuote = (quoteCurrency === "JPY") ? 1000 : 10;
+        if (quoteCurrency === "USD") {
+          valuePerUnitMove = pipValueInQuote;
+          liveDisplay.style.display = "none";
+        } else {
+          // Invert rate if base USD pair
+          const rate = liveRates[quoteCurrency] || 1.0; 
+          valuePerUnitMove = pipValueInQuote / rate;
+          const convPair = `USD${quoteCurrency}`;
+          const timeStr = lastUpdatedTime ? ` • ${lastUpdatedTime}` : '';
+          document.getElementById("rateText").innerText = `${convPair}: ${rate.toFixed(5)}${timeStr}`;
+          liveDisplay.style.display = "flex";
+        }
       }
     }
 
@@ -686,8 +805,10 @@
     document.getElementById("resPipVal").innerText = currencySymbol + valuePerUnitMove.toFixed(2) + " / " + unitLabel;
 
     if (isNaN(slDist) || slDist <= 0 || slPipsRaw.trim() === "") {
-      document.getElementById("resultLot").innerText = "--";
+      resultLotEl.innerText = "--";
+      resultLotEl.classList.remove("warning");
       document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}0.00`;
+      warningNote.style.display = "none";
       document.getElementById("roundingSection").style.display = "none";
       return;
     }
@@ -695,30 +816,81 @@
     let exactLots = cashRisk / (slDist * valuePerUnitMove);
     let roundingContainer = document.getElementById("roundingSection");
 
+    // FXCM 1-Contract step mode
     if (volumeStep === 1.00) {
-      let primaryLots = Math.max(1, Math.round(exactLots));
-      let downLots = Math.max(1, primaryLots - 1);
-      let upLots = primaryLots + 1;
+      let minRisk = 1 * slDist * valuePerUnitMove;
 
-      let primaryRisk = primaryLots * slDist * valuePerUnitMove;
-      let riskDown = downLots * slDist * valuePerUnitMove;
-      let riskUp = upLots * slDist * valuePerUnitMove;
+      if (exactLots < 1.0) {
+        resultLotEl.innerText = "1 (Min)";
+        resultLotEl.classList.add("warning");
+        document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${minRisk.toFixed(2)}`;
+        
+        warningNote.innerText = `⚠️ Exceeds ${currencySymbol}${cashRisk.toFixed(2)} target due to 1-contract minimum`;
+        warningNote.style.display = "block";
 
-      let diffDown = (riskDown - cashRisk).toFixed(2);
-      let diffUp = (riskUp - cashRisk).toFixed(2);
+        let riskUp = 2 * slDist * valuePerUnitMove;
+        document.getElementById("downLots").innerText = "0 Contracts";
+        document.getElementById("upLots").innerText = "2 Contracts";
+        document.getElementById("downRisk").innerText = `${currencySymbol}0.00`;
+        document.getElementById("upRisk").innerText = `${currencySymbol}${riskUp.toFixed(2)}`;
+      } else {
+        let primaryLots = Math.max(1, Math.round(exactLots));
+        resultLotEl.innerText = primaryLots.toFixed(0) + " Contracts";
+        resultLotEl.classList.remove("warning");
+        let primaryRisk = primaryLots * slDist * valuePerUnitMove;
+        document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${primaryRisk.toFixed(2)}`;
+        warningNote.style.display = "none";
 
-      document.getElementById("resultLot").innerText = primaryLots.toFixed(0);
-      document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${primaryRisk.toFixed(2)}`;
-      document.getElementById("downLots").innerText = downLots.toFixed(0);
-      document.getElementById("upLots").innerText = upLots.toFixed(0);
-      document.getElementById("downRisk").innerText = `${currencySymbol}${riskDown.toFixed(2)} (${diffDown >= 0 ? '+' : ''}${currencySymbol}${diffDown})`;
-      document.getElementById("upRisk").innerText = `${currencySymbol}${riskUp.toFixed(2)} (+${currencySymbol}${diffUp})`;
+        let downLots = Math.max(0, primaryLots - 1);
+        let upLots = primaryLots + 1;
+        let riskDown = downLots * slDist * valuePerUnitMove;
+        let riskUp = upLots * slDist * valuePerUnitMove;
+
+        document.getElementById("downLots").innerText = downLots + " Contracts";
+        document.getElementById("upLots").innerText = upLots + " Contracts";
+        document.getElementById("downRisk").innerText = `${currencySymbol}${riskDown.toFixed(2)}`;
+        document.getElementById("upRisk").innerText = `${currencySymbol}${riskUp.toFixed(2)}`;
+      }
 
       roundingContainer.style.display = "flex";
-    } else {
-      document.getElementById("resultLot").innerText = exactLots.toFixed(2);
-      document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${cashRisk.toFixed(2)}`;
-      roundingContainer.style.display = "none";
+    } 
+    // Standard 0.01 step mode (FTMO, W-Funded & Forex)
+    else {
+      let minRisk = 0.01 * slDist * valuePerUnitMove;
+
+      if (exactLots < 0.01) {
+        resultLotEl.innerText = "0.01 (Min)";
+        resultLotEl.classList.add("warning");
+        document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${minRisk.toFixed(2)}`;
+        
+        warningNote.innerText = `⚠️ Exceeds ${currencySymbol}${cashRisk.toFixed(2)} target due to 0.01-lot minimum`;
+        warningNote.style.display = "block";
+
+        let riskUp = 0.02 * slDist * valuePerUnitMove;
+        document.getElementById("downLots").innerText = "0.00 Lots";
+        document.getElementById("upLots").innerText = "0.02 Lots";
+        document.getElementById("downRisk").innerText = `${currencySymbol}0.00`;
+        document.getElementById("upRisk").innerText = `${currencySymbol}${riskUp.toFixed(2)}`;
+        roundingContainer.style.display = "flex";
+      } else {
+        let primaryLots = parseFloat(exactLots.toFixed(2));
+        resultLotEl.innerText = primaryLots.toFixed(2) + " Lots";
+        resultLotEl.classList.remove("warning");
+        let primaryRisk = primaryLots * slDist * valuePerUnitMove;
+        document.getElementById("actualRiskSub").innerText = `Actual Risk: ${currencySymbol}${primaryRisk.toFixed(2)}`;
+        warningNote.style.display = "none";
+
+        let downLots = Math.max(0, parseFloat((primaryLots - 0.01).toFixed(2)));
+        let upLots = parseFloat((primaryLots + 0.01).toFixed(2));
+        let riskDown = downLots * slDist * valuePerUnitMove;
+        let riskUp = upLots * slDist * valuePerUnitMove;
+
+        document.getElementById("downLots").innerText = downLots.toFixed(2) + " Lots";
+        document.getElementById("upLots").innerText = upLots.toFixed(2) + " Lots";
+        document.getElementById("downRisk").innerText = `${currencySymbol}${riskDown.toFixed(2)}`;
+        document.getElementById("upRisk").innerText = `${currencySymbol}${riskUp.toFixed(2)}`;
+        roundingContainer.style.display = "flex";
+      }
     }
   }
 
