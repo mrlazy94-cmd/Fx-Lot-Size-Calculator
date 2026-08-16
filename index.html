@@ -649,8 +649,18 @@
     const stop = parseFloat(document.getElementById("stopPrice").value);
 
     if (!isNaN(entry) && !isNaN(stop) && entry > 0 && stop > 0 && entry !== stop) {
-      const rawDistance = Math.abs(entry - stop);
-      document.getElementById("slPips").value = parseFloat(rawDistance.toFixed(4));
+      let rawDistance = Math.abs(entry - stop);
+
+      // Convert raw price distance to pips for Forex pairs
+      if (activePair.includes("/") && !activePair.startsWith("X") && activePair !== "BTC/USD") {
+        if (activePair.endsWith("JPY")) {
+          rawDistance = rawDistance * 100; // JPY pairs (1 pip = 0.01)
+        } else {
+          rawDistance = rawDistance * 10000; // Standard FX pairs (1 pip = 0.0001)
+        }
+      }
+
+      document.getElementById("slPips").value = parseFloat(rawDistance.toFixed(2));
     } else {
       document.getElementById("slPips").value = "";
     }
